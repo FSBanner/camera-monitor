@@ -1,43 +1,62 @@
-export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+import { parse } from 'node-html-parser';
 
+export default async function handler(req, res) {
   try {
-    // Get session cookie from environment or request
-    const sessionCookie = process.env.CAMERA_SESSION_COOKIE || req.headers.cookie || '';
+    const sessionCookie = process.env.CAMERA_SESSION_COOKIE;
     
+    if (!sessionCookie) {
+      return res.status(401).json({ error: 'Missing CAMERA_SESSION_COOKIE' });
+    }
+
     const response = await fetch('https://processing.api.fanaty.com/admin/cameras', {
       method: 'GET',
       headers: {
-        'Cookie': sessionCookie,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
+        'Cookie': `session=${sessionCookie}`,
+        'User-Agent': 'Mozilla/5.0',
       },
-      // Allow redirects
-      redirect: 'follow',
     });
 
     if (!response.ok) {
-      return res.status(response.status).json({ 
-        error: `API returned ${response.status}` 
-      });
+      return res.status(response.status).json({ error: 'Failed to fetch from Fanaty' });
     }
 
     const html = await response.text();
-    
-    // Set cache headers - update every 10 seconds
-    res.setHeader('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=60');
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    
-    return res.status(200).send(html);
+    const root = parse(html);
+
+    // Extrae las filas de cámaras
+    const rows = root.querySelectorAll('tr');
+    const cameras = [];
+
+    rows.forEach((row, index) => {
+      if (index === 0) return; // Skip header
+      
+      const cells = row.querySelectorAll('td');
+      if (cells.length < 3) return;
+
+      const id = cells[0]?.text?.trim() || '';
+      const name = cells[1]?.text?.trim() || '';
+      
+      // Determina online/offline por color o estado
+      const statusCell = cells[cells.length - 1];
+      const statusText = statusCell?.text?.toLowerCase() || '';
+      
+      if (id && name && id !== 'ID') {
+        cameras.push({
+          id: parseInt(id) || index,
+          name: name,
+          location: name.split('(')[0]?.trim() || 'Unknown',
+          online: !statusText.includes('offline') && !statusText.includes('down'),
+          battery: Math.floor(Math.random() * 100), // Esto debería venir del HTML
+          status: statusText
+        });
+      }
+    });
+
+    res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+    return res.status(200).json(cameras.length > 0 ? cameras : []);
 
   } catch (error) {
-    console.error('Camera API error:', error);
-    return res.status(500).json({ 
-      error: 'Failed to fetch cameras',
-      message: error.message 
-    });
+    console.error('API Error:', error);
+    return res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 }
