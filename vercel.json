@@ -1,0 +1,6 @@
+{
+  "buildCommand": "next build",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://processing.api.fanaty.com/admin/cameras"
+  }
+}
