@@ -1,0 +1,5 @@
+[
+  { "id": 1, "name": "Cámara 1", "location": "Entrada", "online": true, "battery": 85 },
+  { "id": 2, "name": "Cámara 2", "location": "Patio", "online": true, "battery": 92 },
+  { "id": 3, "name": "Cámara 3", "location": "Garaje", "online": false, "battery": 0 }
+]
