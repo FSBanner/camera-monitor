@@ -25,51 +25,19 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Fetch cameras from API
+  // Fetch cameras from API — the API now returns clean JSON
   const fetchCameras = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/cameras');
-      const html = await response.text();
-      
-      // Parse HTML to extract camera data
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const camerasArray = [];
-
-      const rows = doc.querySelectorAll('.camera-row');
-      rows.forEach(row => {
-        const id = row.querySelector('.camera-id')?.textContent.trim() || '';
-        const name = row.querySelector('.camera-desc')?.textContent.trim() || '';
-        const mac = row.querySelector('.camera-mac')?.textContent.trim() || '';
-        const ip = row.querySelector('.camera-ip')?.textContent.trim() || '';
-        const version = row.querySelector('.camera-version')?.textContent.trim() || '';
-        const dotElement = row.querySelector('.camera-dot');
-        
-        let status = 'inactive';
-        if (dotElement) {
-          const bgColor = window.getComputedStyle(dotElement).background;
-          if (bgColor.includes('rgb(224, 75, 74)') || bgColor.includes('#E24B4A')) status = 'down';
-          else if (bgColor.includes('rgb(186, 117, 23)') || bgColor.includes('#BA7517')) status = 'not_recording';
-          else if (bgColor.includes('rgb(239, 159, 39)') || bgColor.includes('#EF9F27')) status = 'pending';
-          else if (bgColor.includes('rgb(124, 179, 66)') || bgColor.includes('#7CB342')) status = 'uploading';
-          else if (bgColor.includes('rgb(99, 153, 34)') || bgColor.includes('#639922')) status = 'recording';
-          else if (bgColor.includes('rgb(24, 95, 165)') || bgColor.includes('#185FA5')) status = 'manual';
-          else if (bgColor.includes('rgb(136, 135, 128)') || bgColor.includes('#888780')) status = 'inactive';
-        }
-
-        camerasArray.push({ 
-          id: parseInt(id), 
-          name, 
-          mac, 
-          ip, 
-          status, 
-          version 
-        });
-      });
-
-      if (camerasArray.length > 0) {
-        setCameras(camerasArray);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        console.error('Camera API error:', err);
+        return;
+      }
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setCameras(data);
         setLastUpdate(new Date());
       }
     } catch (err) {
