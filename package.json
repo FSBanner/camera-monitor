@@ -8,10 +8,11 @@
     "start": "next start"
   },
   "dependencies": {
+    "@prisma/client": "latest",
     "next": "latest",
+    "node-html-parser": "^7.1.0",
     "react": "latest",
-    "react-dom": "latest",
-    "@prisma/client": "latest"
+    "react-dom": "latest"
   },
   "devDependencies": {
     "prisma": "latest"
